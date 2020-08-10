@@ -1,2 +1,0 @@
-boto>=2.4
-google-cloud-storage>=1.18
