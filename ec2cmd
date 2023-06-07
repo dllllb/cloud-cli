@@ -13,16 +13,16 @@ def waitForStatus(inst, waitStatus, requiredStatus):
 
 def stop(inst):
     inst.stop()
-    print 'Waiting for instance to stop...'
+    print('Waiting for instance to stop...')
     waitForStatus(inst, 'stopping', 'stopped')
-    print 'Stopped'
+    print('Stopped')
 
 def start(inst):
     inst.start()
 
-    print 'Waiting for instance to start...'
+    print('Waiting for instance to start...')
     waitForStatus(inst, 'pending', 'running')
-    print 'Started'
+    print('Started')
 
 def getInstanceByName(conn, instanceName):
     insts = conn.get_only_instances(filters={'tag:Name': instanceName})
