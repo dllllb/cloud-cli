@@ -1,5 +1,3 @@
-
-
 def http_cache(url,
                local_path=None,
                cache_prefix='http',
@@ -102,5 +100,5 @@ def main():
 
     print(http_cache(args.url, args.local_path, check_update=args.check_update, dry_run=args.dry_run))
 
-if __name__ == "__main__":
-    main()
+
+main()

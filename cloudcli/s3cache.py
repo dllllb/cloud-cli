@@ -67,5 +67,5 @@ def main():
 
     print(s3cache(args.bucket, args.key, check_update=args.check_update, dry_run=args.dry_run))
 
-if __name__ == "__main__":
-    main()
+
+main()

@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import boto.ec2, os.path, time, argparse
 
 def waitForStatus(inst, waitStatus, requiredStatus):

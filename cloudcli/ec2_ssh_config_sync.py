@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import boto.ec2, os, sys, argparse
 
 def writeConfig(f, config):

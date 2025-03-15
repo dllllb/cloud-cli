@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import boto.ec2, os, json
 
 region = os.environ.get('AWS_DEFAULT_REGION', 'eu-west-1')
