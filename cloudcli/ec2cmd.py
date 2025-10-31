@@ -1,4 +1,4 @@
-import boto.ec2, time, argparse
+import boto.ec2, time, argparse, os
 
 def waitForStatus(inst, waitStatus, requiredStatus):
     status = inst.update()
