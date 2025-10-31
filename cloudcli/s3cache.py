@@ -1,7 +1,8 @@
-def s3cache(bucket, key, cache_prefix='s3cache', check_update=False, dry_run=False):
-    import os
-    import boto
+import os
+import argparse
+import boto
 
+def s3cache(bucket, key, cache_prefix='s3cache', check_update=False, dry_run=False):
     cache = os.path.expanduser("~/.{prefix}".format(prefix=cache_prefix))
 
     path_parts = [cache, bucket] + key.split("/")
@@ -56,8 +57,6 @@ def s3cache(bucket, key, cache_prefix='s3cache', check_update=False, dry_run=Fal
 
 
 def main():
-    import argparse
-
     parser = argparse.ArgumentParser()
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument('--check-update', action='store_true')

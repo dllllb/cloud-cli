@@ -25,4 +25,4 @@ for inst in insts:
 
     groups[inst.id] = [host]
 
-print json.dumps(groups)
+print(json.dumps(groups))

@@ -1,12 +1,15 @@
-def http_cache(url,
-               local_path=None,
-               cache_prefix='http',
-               check_update=False,
-               fail_on_check_failure=True,
-               dry_run=False):
-    import os
-    import hashlib
-    import requests
+import os
+import argparse
+import hashlib
+import requests
+
+def http_cache(
+        url,
+        local_path=None,
+        cache_prefix='http',
+        check_update=False,
+        fail_on_check_failure=True,
+        dry_run=False):
 
     try:
         from tqdm import tqdm
@@ -89,8 +92,6 @@ def http_cache(url,
 
 
 def main():
-    import argparse
-
     parser = argparse.ArgumentParser()
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument('--check-update', action='store_true')

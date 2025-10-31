@@ -1,7 +1,8 @@
-def gcs_cache(bucket, key, cache_prefix='gcs', check_update=False, dry_run=False):
-    import os
-    from google.cloud import storage
+import os
+import argparse
+from google.cloud import storage
 
+def gcs_cache(bucket, key, cache_prefix='gcs', check_update=False, dry_run=False):
     cache = os.path.expanduser("~/.{}".format(cache_prefix))
 
     path_parts = [cache, bucket] + key.split("/")
@@ -58,8 +59,6 @@ def gcs_cache(bucket, key, cache_prefix='gcs', check_update=False, dry_run=False
 
 
 def main():
-    import argparse
-
     parser = argparse.ArgumentParser()
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument('--check-update', action='store_true')
