@@ -35,9 +35,9 @@ disable = [
 max-line-length = 120 
 
 [project.scripts]
-ec2_ansible = "cloudcli:ec2_ansible"
-ec2_ssh_config_sync = "cloudcli:ec2_ssh_config_sync"
-ec2cmd = "cloudcli:ec2cmd"
-gcs_cache = "cloudcli:gcs_cache"
-http_cache = "cloudcli:http_cache"
-s3cache = "cloudcli:s3cache"
+ec2_ansible = "ec2_ansible:main"
+ec2_ssh_config_sync = "ec2_ssh_config_sync:main"
+ec2cmd = "ec2cmd:main"
+gcs_cache = "gcs_cache:main"
+http_cache = "http_cache:main"
+s3cache = "s3cache:main"
