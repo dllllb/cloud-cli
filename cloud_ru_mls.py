@@ -117,7 +117,6 @@ def main():
 
     token = authenticate(ws, config['auth'])
 
-
     if args.command == 'nb-list':
         notebooks = list_notebooks(token, ws)
 
@@ -149,6 +148,19 @@ def main():
         print(f"Found {len(job_fields)} running job(s):")
         print(tabulate(job_fields, headers="keys"))
         print(f"Total GPU used: {sum(int(e['nGPU']) for e in job_fields)}")
+    elif args.command == 'gpu-stat':
+        notebooks = list_notebooks(token, ws)
+
+        nb_ngpu = sum(
+            NB_TYPE_TO_NGPU[nb["notebookType"]] for nb in notebooks
+            if nb.get("status", "unknown") != "running"
+        )
+
+        jobs = list_jobs(token, ws, args.region)
+
+        job_ngpu = sum(int(e['gpu_count']) for e in jobs)
+
+        print(f"Total GPU used: {nb_ngpu + job_ngpu}, notebooks GPUs: {nb_ngpu} jobs GPUs: {job_ngpu}")
 
     else:
         raise ValueError(f"Unknown command: {args.command}")
