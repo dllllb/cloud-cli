@@ -19,7 +19,7 @@ Add `Include mlspace.conf` directive to the `~/.ssh/config`. It should be added 
 
 Generated SSH configuraion can be used with [vllmctl](https://github.com/Adefful/vllmctl):
 ```sh
-uvx git+https://github.com/dllllb/vllmctl gpu-idle-top --host-regex mlspace-.+
+uvx git+https://github.com/Adefful/vllmctl gpu-idle-top --host-regex mlspace-.+
 ```
 
 Generate a list of the SSH config entries from the existing AWS EC2 hosts:
