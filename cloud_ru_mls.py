@@ -125,11 +125,12 @@ def main():
     config = load_config(os.path.expanduser(CONFIG_PATH))
 
     ws_name, ws = get_workspace(config, workspace_name)
-    print(f"Using workspace: {ws_name}")
 
     token = authenticate(ws, config['auth'])
 
     if args.command == 'nb-list':
+        print(f"Using workspace: {ws_name}")
+
         notebooks = list_notebooks(token, ws)
 
         nb_fields = [{
@@ -149,6 +150,8 @@ def main():
         print(f"Total GPU used: {sum(int(e['nGPU']) for e in nb_fields)}")
 
     elif args.command == 'job-list':
+        print(f"Using workspace: {ws_name}")
+
         jobs = list_jobs(token, ws, args.region)
 
         job_fields = [{
@@ -161,6 +164,8 @@ def main():
         print(tabulate(job_fields, headers="keys"))
         print(f"Total GPU used: {sum(int(e['nGPU']) for e in job_fields)}")
     elif args.command == 'gpu-stat':
+        print(f"Using workspace: {ws_name}")
+        
         notebooks = list_notebooks(token, ws)
 
         nb_ngpu = sum(
