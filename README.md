@@ -27,3 +27,23 @@ Generate a list of the SSH config entries from the existing AWS EC2 hosts:
 uvx --from git+https://github.com/dllllb/cloud-cli ec2-ssh-conf-sync --dump --create > ~/.ssh/ec2.conf
 ```
 Add `Include ec2.conf` directive to the `~/.ssh/config`. It should be added before the oher hosts declarations, i. e. in the beginning of the file.
+
+## Cloud.ru credentials
+
+Cloud.ru credentials for ML Space should be in `~/.cloudru/credentials.json`
+
+Example:
+```json
+{
+    "auth": {
+        "client_id": "12345",
+        "client_secret": "12345"
+    },
+    "workspaces": {
+        "workspace-name": {
+            "x-workspace-id": "uuid",
+            "x-api-key": "uuid"
+        }
+    }
+}
+```
