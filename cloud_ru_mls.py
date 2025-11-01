@@ -187,17 +187,17 @@ def main():
             if nb.get("status", "unknown") == "running":
                 continue
 
-            ssh_entries = [[
-                f"Host mlspace-{nb['name']}",
-                f"HostName ssh-{nb['region'].lower()}-jupyter.ai.cloud.ru",
-                f"User {nb['name']}.{ns}",
-                "Port 2222",
-            ] for nb in notebooks if nb.get("status", "unknown") == "running"]
+        ssh_entries = [[
+            f"Host mlspace-{nb['name']}",
+            f"HostName ssh-{nb['region'].lower()}-jupyter.ai.cloud.ru",
+            f"User {nb['name']}.{ns}",
+            "Port 2222",
+        ] for nb in notebooks if nb.get("status", "unknown") == "running"]
 
-            for e in ssh_entries:
-                for r in e:
-                    print(r)
-                print()
+        for e in ssh_entries:
+            for r in e:
+                print(r)
+            print()
     else:
         raise ValueError(f"Unknown command: {args.command}")
 
