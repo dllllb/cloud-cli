@@ -100,6 +100,18 @@ def list_jobs(access_token, workspace, region):
     return resp.json().get("jobs", [])
 
 
+def get_namespace(access_token, workspace):
+    url = f"{BASE_URL}/workspaces/v3/{workspace['x-workspace-id']}"
+    headers = {
+        "authorization": access_token,
+        "x-workspace-id": workspace["x-workspace-id"],
+        "x-api-key": workspace["x-api-key"]
+    }
+    resp = requests.get(url, headers=headers)
+    resp.raise_for_status()
+    return resp.json().get("namespace", "N/A")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('command')
@@ -126,7 +138,7 @@ def main():
             "Duration": timedelta(seconds=nb["ageSeconds"]),
             "nGPU": NB_TYPE_TO_NGPU[nb["notebookType"]],
             "Region": nb["region"],
-        } for nb in notebooks if nb.get("status", "unknown") != "running"]
+        } for nb in notebooks if nb.get("status", "unknown") == "running"]
 
         if len(set(nb["Region"] for nb in nb_fields)) < 2:
             for e in nb_fields:
@@ -153,7 +165,7 @@ def main():
 
         nb_ngpu = sum(
             NB_TYPE_TO_NGPU[nb["notebookType"]] for nb in notebooks
-            if nb.get("status", "unknown") != "running"
+            if nb.get("status", "unknown") == "running"
         )
 
         jobs = list_jobs(token, ws, args.region)
@@ -162,6 +174,25 @@ def main():
 
         print(f"Total GPU used: {nb_ngpu + job_ngpu}, notebooks GPUs: {nb_ngpu} jobs GPUs: {job_ngpu}")
 
+    elif args.command == 'nb-ssh-conf':
+        ns = get_namespace(token, ws)
+        notebooks = list_notebooks(token, ws)
+
+        for nb in notebooks:
+            if nb.get("status", "unknown") == "running":
+                continue
+
+            ssh_entries = [[
+                f"Host mlspace-{nb['name']}",
+                f"HostName ssh-{nb['region'].lower()}-jupyter.ai.cloud.ru",
+                f"User {nb['name']}.{ns}",
+                "Port 2222",
+            ] for nb in notebooks if nb.get("status", "unknown") == "running"]
+
+            for e in ssh_entries:
+                for r in e:
+                    print(r)
+                print()
     else:
         raise ValueError(f"Unknown command: {args.command}")
 
