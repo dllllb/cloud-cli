@@ -14,7 +14,13 @@ Generate a list of the SSH config entries from the running Cloud.ru notebooks:
 ```sh
 uvx --from git+https://github.com/dllllb/cloud-cli cloud-ru-mls nb-ssh-conf > ~/.ssh/mlspace.conf
 ```
+
 Add `Include mlspace.conf` directive to the `~/.ssh/config`. It should be added before the oher hosts declarations, i. e. in the beginning of the file.
+
+Generated SSH configuraion can be used with [vllmctl](https://github.com/Adefful/vllmctl):
+```sh
+uvx git+https://github.com/dllllb/vllmctl gpu-idle-top --host-regex mlspace-.+
+```
 
 Generate a list of the SSH config entries from the existing AWS EC2 hosts:
 ```sh
