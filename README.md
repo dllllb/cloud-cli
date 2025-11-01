@@ -10,12 +10,14 @@ List Cloud.ru ML Space jobs:
 uvx --from git+https://github.com/dllllb/cloud-cli cloud-ru-mls job-list --region SR008
 ```
 
-Generate a list of the SSH config entries from the running Cloud.ru notebooks and print them:
+Generate a list of the SSH config entries from the running Cloud.ru notebooks:
 ```sh
-uvx --from git+https://github.com/dllllb/cloud-cli ec2-ssh-conf-sync --dump --create
+uvx --from git+https://github.com/dllllb/cloud-cli cloud-ru-mls nb-ssh-conf > ~/.ssh/mlspace.conf
 ```
+Add `Include mlspace.conf` directive to the `~/.ssh/config`
 
-Generate a list of the SSH config entries from the existing AWS EC2 hosts and print them:
+Generate a list of the SSH config entries from the existing AWS EC2 hosts:
 ```sh
-uvx --from git+https://github.com/dllllb/cloud-cli ec2-ssh-conf-sync --dump --create
+uvx --from git+https://github.com/dllllb/cloud-cli ec2-ssh-conf-sync --dump --create > ~/.ssh/ec2.conf
 ```
+Add `Include ec2.conf` directive to the `~/.ssh/config`
