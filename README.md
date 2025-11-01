@@ -14,10 +14,10 @@ Generate a list of the SSH config entries from the running Cloud.ru notebooks:
 ```sh
 uvx --from git+https://github.com/dllllb/cloud-cli cloud-ru-mls nb-ssh-conf > ~/.ssh/mlspace.conf
 ```
-Add `Include mlspace.conf` directive to the `~/.ssh/config`
+Add `Include mlspace.conf` directive to the `~/.ssh/config`. It should be added before the oher hosts declarations, i. e. in the beginning of the file.
 
 Generate a list of the SSH config entries from the existing AWS EC2 hosts:
 ```sh
 uvx --from git+https://github.com/dllllb/cloud-cli ec2-ssh-conf-sync --dump --create > ~/.ssh/ec2.conf
 ```
-Add `Include ec2.conf` directive to the `~/.ssh/config`
+Add `Include ec2.conf` directive to the `~/.ssh/config`. It should be added before the oher hosts declarations, i. e. in the beginning of the file.
