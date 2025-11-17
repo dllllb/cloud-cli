@@ -4,7 +4,11 @@ from datetime import timedelta
 import json
 import os
 import requests
+import typer
+from typing_extensions import Annotated
 from tabulate import tabulate
+
+app = typer.Typer()
 
 BASE_URL = "https://api.ai.cloud.ru/public/v2"
 
@@ -65,172 +69,158 @@ def authenticate(ws, config):
     return data["token"]["access_token"]
 
 
-def list_notebooks(access_token, workspace):
+def list_notebooks(headers):
     url = f"{BASE_URL}/notebooks/v2/notebooks"
-    headers = {
-        "authorization": access_token,
-        "x-workspace-id": workspace["x-workspace-id"],
-        "x-api-key": workspace["x-api-key"]
-    }
 
     resp = requests.get(url, headers=headers)
     resp.raise_for_status()
     return resp.json().get("notebooks", [])
 
 
-def list_jobs(access_token, workspace, region):
+def list_jobs(headers, region):
     url = f"{BASE_URL}/jobs"
-    headers = {
-        "authorization": access_token,
-        "x-workspace-id": workspace["x-workspace-id"],
-        "x-api-key": workspace["x-api-key"]
-    }
 
     resp = requests.get(url, headers=headers, params={"status": "Running", "region": region})
     resp.raise_for_status()
     return resp.json().get("jobs", [])
 
 
-def get_namespace(access_token, workspace):
-    url = f"{BASE_URL}/workspaces/v3/{workspace['x-workspace-id']}"
-    headers = {
-        "authorization": access_token,
-        "x-workspace-id": workspace["x-workspace-id"],
-        "x-api-key": workspace["x-api-key"]
-    }
+def get_namespace(headers):
+    url = f"{BASE_URL}/workspaces/v3/{headers['x-workspace-id']}"
+
     resp = requests.get(url, headers=headers)
     resp.raise_for_status()
     return resp.json().get("namespace", "N/A")
 
 
-def get_ws_allocactions(access_token, workspace):
-    url = f"{BASE_URL}/workspaces/v3/{workspace['x-workspace-id']}/allocations"
-    headers = {
-        "authorization": access_token,
-        "x-workspace-id": workspace["x-workspace-id"],
-        "x-api-key": workspace["x-api-key"]
-    }
+def get_ws_allocactions(headers):
+    url = f"{BASE_URL}/workspaces/v3/{headers['x-workspace-id']}/allocations"
 
     resp = requests.get(url, headers=headers)
     resp.raise_for_status()
     return resp.json()
 
 
-def get_allocation_resources(access_token, workspace, alloc):
+def get_allocation_resources(headers, alloc):
     url = f"{BASE_URL}/allocations/{alloc}/resources_status"
-    headers = {
-        "authorization": access_token,
-        "x-workspace-id": workspace["x-workspace-id"],
-        "x-api-key": workspace["x-api-key"]
-    }
 
     resp = requests.get(url, headers=headers)
     resp.raise_for_status()
     return resp.json()
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('command')
-    parser.add_argument('--workspace', default=None)
-    parser.add_argument('--region', default=None)
-
-    args = parser.parse_args()
-    
-    workspace_name = args.workspace
-
+def init_headers(workspace_name: str, verbose=True):
     config = load_config(os.path.expanduser(CONFIG_PATH))
-
     ws_name, ws = get_workspace(config, workspace_name)
-
     token = authenticate(ws, config['auth'])
 
-    if args.command == 'nb-list':
+    headers = {
+        "authorization": token,
+        "x-workspace-id": ws["x-workspace-id"],
+        "x-api-key": ws["x-api-key"]
+    }
+
+    if verbose:
         print(f"Using workspace: {ws_name}")
 
-        notebooks = list_notebooks(token, ws)
+    return headers
 
-        nb_fields = [{
-            "Name": nb["name"],
-            "Author": nb["author"],
-            "Duration": timedelta(seconds=nb["ageSeconds"]),
-            "nGPU": NB_TYPE_TO_NGPU[nb["notebookType"]],
-            "Region": nb["region"],
-        } for nb in notebooks if nb.get("status", "unknown") == "running"]
 
-        if len(set(nb["Region"] for nb in nb_fields)) < 2:
-            for e in nb_fields:
-                del e["Region"]
+@app.command()
+def nb_list(workspace: str = None):
+    headers = init_headers(workspace)
 
-        print(f"Found {len(nb_fields)} running notebook(s):")
-        print(tabulate(nb_fields, headers="keys", floatfmt=".0f"))
-        print(f"Total GPU used: {sum(int(e['nGPU']) for e in nb_fields)}")
+    notebooks = list_notebooks(headers)
 
-    elif args.command == 'job-list':
-        print(f"Using workspace: {ws_name}")
+    nb_fields = [{
+        "Name": nb["name"],
+        "Author": nb["author"],
+        "Duration": timedelta(seconds=nb["ageSeconds"]),
+        "nGPU": NB_TYPE_TO_NGPU[nb["notebookType"]],
+        "Region": nb["region"],
+    } for nb in notebooks if nb.get("status", "unknown") == "running"]
 
-        jobs = list_jobs(token, ws, args.region)
+    if len(set(nb["Region"] for nb in nb_fields)) < 2:
+        for e in nb_fields:
+            del e["Region"]
 
-        job_fields = [{
-            "Desc": job["job_desc"],
-            "nGPU": job["gpu_count"],
-            "Duration": timedelta(seconds=int(job["duration"][:-1])),
-        } for job in jobs]
+    print(f"Found {len(nb_fields)} running notebook(s):")
+    print(tabulate(nb_fields, headers="keys", floatfmt=".0f"))
+    print(f"Total GPU used: {sum(int(e['nGPU']) for e in nb_fields)}")
 
-        print(f"Found {len(job_fields)} running job(s):")
-        print(tabulate(job_fields, headers="keys"))
-        print(f"Total GPU used: {sum(int(e['nGPU']) for e in job_fields)}")
-    elif args.command == 'gpu-stat':
-        print(f"Using workspace: {ws_name}")
-        
-        notebooks = list_notebooks(token, ws)
 
-        nb_ngpu = sum(
-            NB_TYPE_TO_NGPU[nb["notebookType"]] for nb in notebooks
-            if nb.get("status", "unknown") == "running"
-            and nb.get("region", "unknown").lower() == args.region.lower()
-        )
+@app.command()
+def job_list(region: Annotated[str, typer.Option()], workspace: str = None):
+    headers = init_headers(workspace)
 
-        jobs = list_jobs(token, ws, args.region)
+    jobs = list_jobs(headers, region)
 
-        job_ngpu = sum(int(e['gpu_count']) for e in jobs)
+    job_fields = [{
+        "Desc": job["job_desc"],
+        "nGPU": job["gpu_count"],
+        "Duration": timedelta(seconds=int(job["duration"][:-1])),
+    } for job in jobs]
 
-        allocs = get_ws_allocactions(token, ws)
+    print(f"Found {len(job_fields)} running job(s):")
+    print(tabulate(job_fields, headers="keys"))
+    print(f"Total GPU used: {sum(int(e['nGPU']) for e in job_fields)}")
 
-        total_gpus = 0
-        available_gpus = 0
-        for al in allocs:
-            if not al.get("region_key", "unknown").lower() == args.region.lower():
-                continue
 
-            alloc_res = get_allocation_resources(token, ws, al["id"])
+@app.command()
+def gpu_stat(region: Annotated[str, typer.Option()], workspace: str = None):
+    headers = init_headers(workspace)
 
-            total_gpus += alloc_res["gpu"]["current"]
-            available_gpus += alloc_res["gpu"]["available"]
+    notebooks = list_notebooks(headers)
 
-        print(f"GPUs: {int(available_gpus)}/{int(total_gpus)}, % used: {(1-available_gpus/total_gpus)*100:.2f}, notebooks GPUs: {nb_ngpu}, jobs GPUs: {job_ngpu}")
+    nb_ngpu = sum(
+        NB_TYPE_TO_NGPU[nb["notebookType"]] for nb in notebooks
+        if nb.get("status", "unknown") == "running"
+        and nb.get("region", "unknown").lower() == region.lower()
+    )
 
-    elif args.command == 'nb-ssh-conf':
-        ns = get_namespace(token, ws)
-        notebooks = list_notebooks(token, ws)
+    jobs = list_jobs(headers, region)
 
-        for nb in notebooks:
-            if nb.get("status", "unknown") == "running":
-                continue
+    job_ngpu = sum(int(e['gpu_count']) for e in jobs)
 
-        ssh_entries = [[
-            f"Host mlspace-{nb['name']}",
-            f"HostName ssh-{nb['region'].lower()}-jupyter.ai.cloud.ru",
-            f"User {nb['name']}.{ns}",
-            "Port 2222",
-        ] for nb in notebooks if nb.get("status", "unknown") == "running"]
+    allocs = get_ws_allocactions(headers)
 
-        for e in ssh_entries:
-            for r in e:
-                print(r)
-            print()
-    else:
-        raise ValueError(f"Unknown command: {args.command}")
+    total_gpus = 0
+    available_gpus = 0
+    for al in allocs:
+        if not al.get("region_key", "unknown").lower() == region.lower():
+            continue
+
+        alloc_res = get_allocation_resources(headers, al["id"])
+
+        total_gpus += alloc_res["gpu"]["current"]
+        available_gpus += alloc_res["gpu"]["available"]
+
+    print(f"GPUs: {int(available_gpus)}/{int(total_gpus)}, % used: {(1-available_gpus/total_gpus)*100:.2f}, notebooks GPUs: {nb_ngpu}, jobs GPUs: {job_ngpu}")
+
+
+@app.command()
+def nb_ssh_conf(workspace: str = None):
+    headers = init_headers(workspace, verbose=False)
+
+    ns = get_namespace(headers)
+    notebooks = list_notebooks(headers)
+
+    for nb in notebooks:
+        if nb.get("status", "unknown") == "running":
+            continue
+
+    ssh_entries = [[
+        f"Host mlspace-{nb['name']}",
+        f"HostName ssh-{nb['region'].lower()}-jupyter.ai.cloud.ru",
+        f"User {nb['name']}.{ns}",
+        "Port 2222",
+    ] for nb in notebooks if nb.get("status", "unknown") == "running"]
+
+    for e in ssh_entries:
+        for r in e:
+            print(r)
+        print()
+
 
 if __name__ == "__main__":
-    main()
+    app()
