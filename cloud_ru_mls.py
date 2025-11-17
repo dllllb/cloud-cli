@@ -112,6 +112,32 @@ def get_namespace(access_token, workspace):
     return resp.json().get("namespace", "N/A")
 
 
+def get_ws_allocactions(access_token, workspace):
+    url = f"{BASE_URL}/workspaces/v3/{workspace['x-workspace-id']}/allocations"
+    headers = {
+        "authorization": access_token,
+        "x-workspace-id": workspace["x-workspace-id"],
+        "x-api-key": workspace["x-api-key"]
+    }
+
+    resp = requests.get(url, headers=headers)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_allocation_resources(access_token, workspace, alloc):
+    url = f"{BASE_URL}/allocations/{alloc}/resources_status"
+    headers = {
+        "authorization": access_token,
+        "x-workspace-id": workspace["x-workspace-id"],
+        "x-api-key": workspace["x-api-key"]
+    }
+
+    resp = requests.get(url, headers=headers)
+    resp.raise_for_status()
+    return resp.json()
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('command')
@@ -171,13 +197,27 @@ def main():
         nb_ngpu = sum(
             NB_TYPE_TO_NGPU[nb["notebookType"]] for nb in notebooks
             if nb.get("status", "unknown") == "running"
+            and nb.get("region", "unknown").lower() == args.region.lower()
         )
 
         jobs = list_jobs(token, ws, args.region)
 
         job_ngpu = sum(int(e['gpu_count']) for e in jobs)
 
-        print(f"Total GPU used: {nb_ngpu + job_ngpu}, notebooks GPUs: {nb_ngpu} jobs GPUs: {job_ngpu}")
+        allocs = get_ws_allocactions(token, ws)
+
+        total_gpus = 0
+        available_gpus = 0
+        for al in allocs:
+            if not al.get("region_key", "unknown").lower() == args.region.lower():
+                continue
+
+            alloc_res = get_allocation_resources(token, ws, al["id"])
+
+            total_gpus += alloc_res["gpu"]["current"]
+            available_gpus += alloc_res["gpu"]["available"]
+
+        print(f"GPUs: {int(available_gpus)}/{int(total_gpus)}, % used: {(1-available_gpus/total_gpus)*100:.2f}, notebooks GPUs: {nb_ngpu}, jobs GPUs: {job_ngpu}")
 
     elif args.command == 'nb-ssh-conf':
         ns = get_namespace(token, ws)

@@ -10,6 +10,11 @@ List Cloud.ru ML Space jobs:
 uvx --from git+https://github.com/dllllb/cloud-cli cloud-ru-mls job-list --region SR008
 ```
 
+Show Cloud.ru ML Space region GPU status:
+```sh
+uvx --from git+https://github.com/dllllb/cloud-cli cloud-ru-mls gpu-stat --region SR008
+```
+
 Generate a list of the SSH config entries from the running Cloud.ru notebooks:
 ```sh
 uvx --from git+https://github.com/dllllb/cloud-cli cloud-ru-mls nb-ssh-conf > ~/.ssh/mlspace.conf
