@@ -23,17 +23,8 @@ CONFIG_FORMAT = """{
     }
 }"""
 
-NB_TYPE_TO_NGPU = {
-    "gpu_1": 1,
-    "gpu_2": 2,
-    "gpu_3": 3,
-    "gpu_4": 4,
-    "gpu_5": 5,
-    "gpu_6": 6,
-    "gpu_7": 7,
-    "gpu_8": 8,
-    "cce": 0
-}
+NB_TYPE_TO_NGPU = {f"gpu_{n}": n for n in range (1, 9)}
+NB_TYPE_TO_NGPU["cce"] = 0
 
 
 def load_config(path):
