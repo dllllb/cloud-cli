@@ -134,7 +134,7 @@ def init_headers(workspace_name: str, verbose=True):
     }
 
     if verbose:
-        print(f"Using workspace: {ws_name}")
+        rprint(Markdown(f"Using workspace: `{ws_name}`"))
 
     return headers
 
@@ -214,7 +214,7 @@ def gpu_stat(
         total_gpus += alloc_res["gpu"]["current"]
         available_gpus += alloc_res["gpu"]["available"]
 
-    print(f"GPUs: {int(available_gpus)}/{int(total_gpus)}, % used: {(1-available_gpus/total_gpus)*100:.2f}, notebooks GPUs: {nb_ngpu}, jobs GPUs: {job_ngpu}")
+    rprint(f"GPUs: {int(available_gpus)}/{int(total_gpus)}, % used: {(1-available_gpus/total_gpus)*100:.2f}, notebooks GPUs: {nb_ngpu}, jobs GPUs: {job_ngpu}")
 
 
 @app.command()
