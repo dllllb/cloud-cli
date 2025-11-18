@@ -127,7 +127,7 @@ def init_headers(workspace_name: str, verbose=True):
 
 
 @app.command()
-def nb_list(workspace: str = None):
+def nb_list(workspace: Annotated[str, typer.Option()] = None):
     headers = init_headers(workspace)
 
     notebooks = list_notebooks(headers)
@@ -150,7 +150,10 @@ def nb_list(workspace: str = None):
 
 
 @app.command()
-def job_list(region: Annotated[str, typer.Option()], workspace: str = None):
+def job_list(
+    region: Annotated[str, typer.Option()],
+    workspace: Annotated[str, typer.Option()] = None):
+
     headers = init_headers(workspace)
 
     jobs = list_jobs(headers, region)
@@ -167,7 +170,10 @@ def job_list(region: Annotated[str, typer.Option()], workspace: str = None):
 
 
 @app.command()
-def gpu_stat(region: Annotated[str, typer.Option()], workspace: str = None):
+def gpu_stat(
+    region: Annotated[str, typer.Option()],
+    workspace: Annotated[str, typer.Option()] = None):
+
     headers = init_headers(workspace)
 
     notebooks = list_notebooks(headers)
@@ -199,7 +205,7 @@ def gpu_stat(region: Annotated[str, typer.Option()], workspace: str = None):
 
 
 @app.command()
-def nb_ssh_conf(workspace: str = None):
+def nb_ssh_conf(workspace: Annotated[str, typer.Option()] = None):
     headers = init_headers(workspace, verbose=False)
 
     ns = get_namespace(headers)
@@ -222,5 +228,9 @@ def nb_ssh_conf(workspace: str = None):
         print()
 
 
-if __name__ == "__main__":
+def main():
     app()
+
+
+if __name__ == "__main__":
+    main()
