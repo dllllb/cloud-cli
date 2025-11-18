@@ -14,7 +14,7 @@ CONFIG_PATH = "~/.cloudru/credentials.json"
 CONFIGURAION_FILE_HELP = """
 **Configuration file is required!**
 
-*Configuration file path:* `~/.cloudru/credentials.json`
+*Configuration file path:* `CONFIG_FILE_PATH`
 
 *Configuration file example:*
 ```json
@@ -30,7 +30,7 @@ CONFIGURAION_FILE_HELP = """
         }
     }
 ```
-}"""
+}""".replace('CONFIG_FILE_PATH', CONFIG_PATH)
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -40,7 +40,8 @@ NB_TYPE_TO_NGPU = {f"gpu_{n}": n for n in range (1, 9)}
 NB_TYPE_TO_NGPU["cce"] = 0
 
 
-def load_config(path):
+def load_config():
+    path = os.path.expanduser(CONFIG_PATH)
     if not os.path.exists(path):
         rprint(Markdown(CONFIGURAION_FILE_HELP))
         raise typer.Exit()
@@ -123,7 +124,7 @@ def get_allocation_resources(headers, alloc):
 
 
 def init_headers(workspace_name: str, verbose=True):
-    config = load_config(os.path.expanduser(CONFIG_PATH))
+    config = load_config()
     ws_name, ws = get_workspace(config, workspace_name)
     token = authenticate(ws, config['auth'])
 
@@ -189,18 +190,6 @@ def gpu_stat(
 
     headers = init_headers(workspace)
 
-    notebooks = list_notebooks(headers)
-
-    nb_ngpu = sum(
-        NB_TYPE_TO_NGPU[nb["notebookType"]] for nb in notebooks
-        if nb.get("status", "unknown") == "running"
-        and nb.get("region", "unknown").lower() == region.lower()
-    )
-
-    jobs = list_jobs(headers, region)
-
-    job_ngpu = sum(int(e['gpu_count']) for e in jobs)
-
     allocs = get_ws_allocactions(headers)
 
     total_gpus = 0
@@ -214,7 +203,20 @@ def gpu_stat(
         total_gpus += alloc_res["gpu"]["current"]
         available_gpus += alloc_res["gpu"]["available"]
 
-    rprint(f"GPUs: {int(available_gpus)}/{int(total_gpus)}, % used: {(1-available_gpus/total_gpus)*100:.2f}, notebooks GPUs: {nb_ngpu}, jobs GPUs: {job_ngpu}")
+    rprint(f"GPUs: {int(available_gpus)}/{int(total_gpus)}, % used: {(1-available_gpus/total_gpus)*100:.2f}")
+
+    notebooks = list_notebooks(headers)
+
+    nb_ngpu = sum(
+        NB_TYPE_TO_NGPU[nb["notebookType"]] for nb in notebooks
+        if nb.get("status", "unknown") == "running"
+        and nb.get("region", "unknown").lower() == region.lower()
+    )
+
+    jobs = list_jobs(headers, region)
+
+    job_ngpu = sum(int(e['gpu_count']) for e in jobs)
+    rprint(f"Notebooks GPUs: {nb_ngpu}, jobs GPUs: {job_ngpu}")
 
 
 @app.command()
