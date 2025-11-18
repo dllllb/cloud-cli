@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import argparse
 from datetime import timedelta
 import json
 import os
@@ -7,14 +6,19 @@ import requests
 import typer
 from typing_extensions import Annotated
 from tabulate import tabulate
-
-app = typer.Typer()
-
-BASE_URL = "https://api.ai.cloud.ru/public/v2"
+from rich import print as rprint
+from rich.markdown import Markdown
 
 CONFIG_PATH = "~/.cloudru/credentials.json"
 
-CONFIG_FORMAT = """{
+CONFIGURAION_FILE_HELP = """
+**Configuration file is required!**
+
+*Configuration file path:* `~/.cloudru/credentials.json`
+
+*Configuration file example:*
+```json
+{
     "auth": {
         "client_id": "12345",
         "client_secret": "12345"
@@ -25,13 +29,22 @@ CONFIG_FORMAT = """{
             "x-api-key": "uuid"
         }
     }
+```
 }"""
+
+app = typer.Typer(no_args_is_help=True)
+
+BASE_URL = "https://api.ai.cloud.ru/public/v2"
 
 NB_TYPE_TO_NGPU = {f"gpu_{n}": n for n in range (1, 9)}
 NB_TYPE_TO_NGPU["cce"] = 0
 
 
 def load_config(path):
+    if not os.path.exists(path):
+        rprint(Markdown(CONFIGURAION_FILE_HELP))
+        raise typer.Exit()
+
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
