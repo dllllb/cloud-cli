@@ -2,9 +2,9 @@
 from datetime import timedelta
 import json
 import os
+from typing import Annotated
 import requests
 import typer
-from typing_extensions import Annotated
 from tabulate import tabulate
 from rich import print as rprint
 from rich.markdown import Markdown
