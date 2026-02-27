@@ -152,6 +152,7 @@ def nb_list(workspace: Annotated[str, typer.Option()] = None):
         "Duration": timedelta(seconds=nb["ageSeconds"]),
         "nGPU": NB_TYPE_TO_NGPU[nb["notebookType"]],
         "Region": nb["region"],
+        "Description": nb["description"],
     } for nb in notebooks if nb.get("status", "unknown") == "running"]
 
     if len(set(nb["Region"] for nb in nb_fields)) < 2:
