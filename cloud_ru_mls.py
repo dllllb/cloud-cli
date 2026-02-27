@@ -141,7 +141,7 @@ def init_headers(workspace_name: str, verbose=True):
 
 
 @app.command()
-def nb_list(workspace: Annotated[str, typer.Option()] = None):
+def nb_list(workspace: Annotated[str, typer.Option()] = None, description: bool = False):
     headers = init_headers(workspace)
 
     notebooks = list_notebooks(headers)
@@ -154,6 +154,10 @@ def nb_list(workspace: Annotated[str, typer.Option()] = None):
         "Region": nb["region"],
         "Description": nb["description"],
     } for nb in notebooks if nb.get("status", "unknown") == "running"]
+
+    if not description:
+        for e in nb_fields:
+            del e["Description"]
 
     if len(set(nb["Region"] for nb in nb_fields)) < 2:
         for e in nb_fields:
