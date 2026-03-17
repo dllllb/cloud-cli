@@ -290,7 +290,7 @@ def s3cache(
     typer.echo(local_path)
 
 
-@app.command("gcs_cache")
+@app.command("gcs-cache")
 def gcs_cache(
     bucket: str = typer.Argument(..., help="GCS bucket name."),
     key: str = typer.Argument(..., help="GCS object key."),
@@ -311,7 +311,7 @@ def gcs_cache(
     typer.echo(local_path)
 
 
-@app.command("http_cache")
+@app.command("http-cache")
 def http_cache(
     url: str = typer.Argument(..., help="File URL to cache."),
     local_path: Optional[str] = typer.Option(None, "--local-path", help="Explicit local destination path."),

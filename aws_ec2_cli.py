@@ -105,7 +105,7 @@ def write_ssh_config(file_obj: TextIO, config: List[Dict[str, Any]]) -> None:
         file_obj.write("\n")
 
 
-@app.command("ec2_ssh_config_sync")
+@app.command("ec2-ssh-config-sync")
 def ec2_ssh_config_sync(
     dump: bool = typer.Option(False, "--dump", help="Print generated config to stdout."),
     create: bool = typer.Option(False, "--create", help="Build config from scratch."),
