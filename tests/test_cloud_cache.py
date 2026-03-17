@@ -51,18 +51,14 @@ class FakeGcsClient:
 
 
 class FakeHttpResponse:
-    def __init__(self, status_code, chunks=None):
+    def __init__(self, status_code, chunks=None, headers=None):
         self.status_code = status_code
         self._chunks = chunks or []
+        self.headers = headers or {}
 
     def iter_content(self, chunk_size=128):
         del chunk_size
         return iter(self._chunks)
-
-
-@pytest.fixture(autouse=True)
-def _identity_tqdm(monkeypatch):
-    monkeypatch.setattr(cloud_cache, "tqdm", lambda it: it)
 
 
 @pytest.fixture

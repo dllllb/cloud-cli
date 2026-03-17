@@ -7,9 +7,42 @@ from urllib.parse import urlparse
 import boto
 import requests
 import typer
-from tqdm import tqdm
+from rich.progress import (
+    BarColumn,
+    DownloadColumn,
+    Progress,
+    TextColumn,
+    TimeRemainingColumn,
+    TransferSpeedColumn,
+)
 
 app = typer.Typer(no_args_is_help=True)
+
+
+def _write_stream_with_progress(response, file_obj, description: str):
+    headers = getattr(response, "headers", {}) or {}
+    content_length = headers.get("Content-Length") or headers.get("content-length")
+    total = None
+    if content_length is not None:
+        try:
+            total = int(content_length)
+        except (TypeError, ValueError):
+            total = None
+
+    with Progress(
+        TextColumn("{task.description}"),
+        BarColumn(),
+        DownloadColumn(),
+        TransferSpeedColumn(),
+        TimeRemainingColumn(),
+        transient=True,
+    ) as progress:
+        task_id = progress.add_task(description, total=total)
+        for chunk in response.iter_content(chunk_size=128):
+            if not chunk:
+                continue
+            file_obj.write(chunk)
+            progress.update(task_id, advance=len(chunk))
 
 
 def s3cache_download(
@@ -207,9 +240,9 @@ def http_cache_download(
             else:
                 typer.echo(f"file {cache_file} is changed, updating...")
                 with open(cache_file, "wb") as file_obj:
-                    for chunk in tqdm(response.iter_content(chunk_size=128)):
-                        if chunk:
-                            file_obj.write(chunk)
+                    _write_stream_with_progress(
+                        response, file_obj, f"Updating {os.path.basename(cache_file)}"
+                    )
                 typer.echo(f"file {cache_file} is updated")
         else:
             typer.echo(f"file {cache_file} is already stored locally")
@@ -227,9 +260,9 @@ def http_cache_download(
             )
 
         with open(cache_file, "wb") as file_obj:
-            for chunk in tqdm(response.iter_content(chunk_size=128)):
-                if chunk:
-                    file_obj.write(chunk)
+            _write_stream_with_progress(
+                response, file_obj, f"Downloading {os.path.basename(cache_file)}"
+            )
 
         typer.echo(f"file {cache_file} is downloaded")
 
