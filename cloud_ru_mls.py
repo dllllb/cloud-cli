@@ -3,11 +3,13 @@ from datetime import timedelta
 import json
 import os
 from typing import Annotated
+
 import requests
 import typer
-from tabulate import tabulate
 from rich import print as rprint
 from rich.markdown import Markdown
+from rich.table import Table
+from rich import box
 
 CONFIG_PATH = "~/.cloudru/credentials.json"
 
@@ -36,8 +38,22 @@ app = typer.Typer(no_args_is_help=True)
 
 BASE_URL = "https://api.ai.cloud.ru/public/v2"
 
-NB_TYPE_TO_NGPU = {f"gpu_{n}": n for n in range (1, 9)}
+NB_TYPE_TO_NGPU = {f"gpu_{n}": n for n in range(1, 9)}
 NB_TYPE_TO_NGPU["cce"] = 0
+
+
+def _render_table(rows, columns, numeric_columns=None):
+    table = Table(show_header=True, show_edge=False, box=box.SIMPLE)
+    numeric_columns = set(numeric_columns or [])
+
+    for column in columns:
+        justify = "right" if column in numeric_columns else "left"
+        table.add_column(column, justify=justify)
+
+    for row in rows:
+        table.add_row(*(str(row.get(column, "")) for column in columns))
+
+    return table
 
 
 def load_config():
@@ -69,7 +85,7 @@ def authenticate(ws, config):
     url = f"{BASE_URL}/service_auth"
     payload = {
         "client_id": config["client_id"],
-        "client_secret": config["client_secret"]
+        "client_secret": config["client_secret"],
     }
     headers = {
         "x-api-key": ws["x-api-key"],
@@ -126,12 +142,12 @@ def get_allocation_resources(headers, alloc):
 def init_headers(workspace_name: str, verbose=True):
     config = load_config()
     ws_name, ws = get_workspace(config, workspace_name)
-    token = authenticate(ws, config['auth'])
+    token = authenticate(ws, config["auth"])
 
     headers = {
         "authorization": token,
         "x-workspace-id": ws["x-workspace-id"],
-        "x-api-key": ws["x-api-key"]
+        "x-api-key": ws["x-api-key"],
     }
 
     if verbose:
@@ -146,53 +162,58 @@ def nb_list(workspace: Annotated[str, typer.Option()] = None, description: bool 
 
     notebooks = list_notebooks(headers)
 
-    nb_fields = [{
-        "Name": nb["name"],
-        "Author": nb["author"],
-        "Duration": timedelta(seconds=nb["ageSeconds"]),
-        "nGPU": NB_TYPE_TO_NGPU[nb["notebookType"]],
-        "Region": nb["region"],
-        "Description": nb["description"],
-    } for nb in notebooks if nb.get("status", "unknown") == "running"]
+    nb_fields = [
+        {
+            "Name": nb["name"],
+            "Author": nb["author"],
+            "Duration": timedelta(seconds=nb["ageSeconds"]),
+            "nGPU": NB_TYPE_TO_NGPU[nb["notebookType"]],
+            "Region": nb["region"],
+            "Description": nb["description"],
+        }
+        for nb in notebooks
+        if nb.get("status", "unknown") == "running"
+    ]
 
     if not description:
-        for e in nb_fields:
-            del e["Description"]
+        for entry in nb_fields:
+            del entry["Description"]
 
-    if len(set(nb["Region"] for nb in nb_fields)) < 2:
-        for e in nb_fields:
-            del e["Region"]
+    if len(set(entry["Region"] for entry in nb_fields)) < 2:
+        for entry in nb_fields:
+            del entry["Region"]
+
+    columns = list(nb_fields[0].keys()) if nb_fields else ["Name", "Author", "Duration", "nGPU"]
 
     print(f"Found {len(nb_fields)} running notebook(s):")
-    print(tabulate(nb_fields, headers="keys", floatfmt=".0f"))
-    print(f"Total GPU used: {sum(int(e['nGPU']) for e in nb_fields)}")
+    rprint(_render_table(nb_fields, columns, numeric_columns={"nGPU"}))
+    print(f"Total GPU used: {sum(int(entry['nGPU']) for entry in nb_fields)}")
 
 
 @app.command()
-def job_list(
-    region: Annotated[str, typer.Option()],
-    workspace: Annotated[str, typer.Option()] = None):
-
+def job_list(region: Annotated[str, typer.Option()], workspace: Annotated[str, typer.Option()] = None):
     headers = init_headers(workspace)
 
     jobs = list_jobs(headers, region)
 
-    job_fields = [{
-        "Desc": job["job_desc"],
-        "nGPU": job["gpu_count"],
-        "Duration": timedelta(seconds=int(job["duration"][:-1])),
-    } for job in jobs]
+    job_fields = [
+        {
+            "Desc": job["job_desc"],
+            "nGPU": job["gpu_count"],
+            "Duration": timedelta(seconds=int(job["duration"][:-1])),
+        }
+        for job in jobs
+    ]
+
+    columns = list(job_fields[0].keys()) if job_fields else ["Desc", "nGPU", "Duration"]
 
     print(f"Found {len(job_fields)} running job(s):")
-    print(tabulate(job_fields, headers="keys"))
-    print(f"Total GPU used: {sum(int(e['nGPU']) for e in job_fields)}")
+    rprint(_render_table(job_fields, columns, numeric_columns={"nGPU"}))
+    print(f"Total GPU used: {sum(int(entry['nGPU']) for entry in job_fields)}")
 
 
 @app.command()
-def gpu_stat(
-    region: Annotated[str, typer.Option()],
-    workspace: Annotated[str, typer.Option()] = None):
-
+def gpu_stat(region: Annotated[str, typer.Option()], workspace: Annotated[str, typer.Option()] = None):
     headers = init_headers(workspace)
 
     allocs = get_ws_allocactions(headers)
@@ -208,19 +229,20 @@ def gpu_stat(
         total_gpus += alloc_res["gpu"]["current"]
         available_gpus += alloc_res["gpu"]["available"]
 
-    rprint(f"GPUs: {int(available_gpus)}/{int(total_gpus)}, % used: {(1-available_gpus/total_gpus)*100:.2f}")
+    rprint(f"GPUs: {int(available_gpus)}/{int(total_gpus)}, % used: {(1 - available_gpus / total_gpus) * 100:.2f}")
 
     notebooks = list_notebooks(headers)
 
     nb_ngpu = sum(
-        NB_TYPE_TO_NGPU[nb["notebookType"]] for nb in notebooks
+        NB_TYPE_TO_NGPU[nb["notebookType"]]
+        for nb in notebooks
         if nb.get("status", "unknown") == "running"
         and nb.get("region", "unknown").lower() == region.lower()
     )
 
     jobs = list_jobs(headers, region)
 
-    job_ngpu = sum(int(e['gpu_count']) for e in jobs)
+    job_ngpu = sum(int(e["gpu_count"]) for e in jobs)
     rprint(f"Notebooks GPUs: {nb_ngpu}, jobs GPUs: {job_ngpu}")
 
 
@@ -235,16 +257,20 @@ def nb_ssh_conf(workspace: Annotated[str, typer.Option()] = None):
         if nb.get("status", "unknown") == "running":
             continue
 
-    ssh_entries = [[
-        f"Host mlspace-{nb['name']}",
-        f"HostName ssh-{nb['region'].lower()}-jupyter.ai.cloud.ru",
-        f"User {nb['name']}.{ns}",
-        "Port 2222",
-    ] for nb in notebooks if nb.get("status", "unknown") == "running"]
+    ssh_entries = [
+        [
+            f"Host mlspace-{nb['name']}",
+            f"HostName ssh-{nb['region'].lower()}-jupyter.ai.cloud.ru",
+            f"User {nb['name']}.{ns}",
+            "Port 2222",
+        ]
+        for nb in notebooks
+        if nb.get("status", "unknown") == "running"
+    ]
 
-    for e in ssh_entries:
-        for r in e:
-            print(r)
+    for entry in ssh_entries:
+        for row in entry:
+            print(row)
         print()
 
 

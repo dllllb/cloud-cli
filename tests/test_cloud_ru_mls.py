@@ -158,13 +158,11 @@ def test_nb_list_cli_outputs_count_and_total_gpu(runner, monkeypatch):
             },
         ],
     )
-    monkeypatch.setattr(cloud_ru_mls, "tabulate", lambda rows, **_: f"rows={len(rows)}")
-
     result = runner.invoke(cloud_ru_mls.app, ["nb-list"])
 
     assert result.exit_code == 0
     assert "Found 1 running notebook(s):" in result.stdout
-    assert "rows=1" in result.stdout
+    assert "nb1" in result.stdout
     assert "Total GPU used: 2" in result.stdout
 
 
@@ -178,13 +176,12 @@ def test_job_list_cli_outputs_count_and_total_gpu(runner, monkeypatch):
             {"job_desc": "train-b", "gpu_count": 1, "duration": "30s"},
         ],
     )
-    monkeypatch.setattr(cloud_ru_mls, "tabulate", lambda rows, **_: f"rows={len(rows)}")
-
     result = runner.invoke(cloud_ru_mls.app, ["job-list", "--region", "SR008"])
 
     assert result.exit_code == 0
     assert "Found 2 running job(s):" in result.stdout
-    assert "rows=2" in result.stdout
+    assert "train-a" in result.stdout
+    assert "train-b" in result.stdout
     assert "Total GPU used: 3" in result.stdout
 
 
@@ -334,22 +331,13 @@ def test_nb_list_cli_with_description_and_multiple_regions_keeps_columns(runner,
             },
         ],
     )
-    captured = {}
-
-    def fake_tabulate(rows, headers="keys", floatfmt=".0f"):
-        del headers, floatfmt
-        captured["rows"] = rows
-        return "TABLE"
-
-    monkeypatch.setattr(cloud_ru_mls, "tabulate", fake_tabulate)
-
     result = runner.invoke(cloud_ru_mls.app, ["nb-list", "--description"])
 
     assert result.exit_code == 0
-    assert "TABLE" in result.stdout
-    assert len(captured["rows"]) == 2
-    assert "Description" in captured["rows"][0]
-    assert "Region" in captured["rows"][0]
+    assert "Description" in result.stdout
+    assert "Region" in result.stdout
+    assert "desc-a" in result.stdout
+    assert "desc-b" in result.stdout
     assert "Total GPU used: 3" in result.stdout
 
 
