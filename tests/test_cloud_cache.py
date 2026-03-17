@@ -209,3 +209,185 @@ def test_http_root_path_defaults_to_index_html(cache_home, monkeypatch):
     expected = cache_home / ".cache" / "example.com" / "index.html"
     assert path == str(expected)
     assert expected.read_bytes() == b"x"
+
+
+def test_s3cache_dry_run_when_file_exists_with_check_update(cache_home, monkeypatch):
+    item = cache_home / ".cache" / "bucket" / "obj.txt"
+    item.parent.mkdir(parents=True)
+    item.write_text("x", encoding="utf-8")
+
+    connect = MagicMock()
+    monkeypatch.setattr(cloud_cache.boto, "connect_s3", connect)
+
+    path = cloud_cache.s3cache_download(
+        "bucket", "obj.txt", cache_prefix="cache", dry_run=True, check_update=True
+    )
+
+    assert path == str(item)
+    connect.assert_not_called()
+
+
+def test_s3cache_dry_run_when_file_missing(cache_home, monkeypatch):
+    connect = MagicMock()
+    monkeypatch.setattr(cloud_cache.boto, "connect_s3", connect)
+
+    path = cloud_cache.s3cache_download("bucket", "missing.txt", cache_prefix="cache", dry_run=True)
+
+    assert path.endswith("/.cache/bucket/missing.txt")
+    connect.assert_not_called()
+
+
+def test_s3cache_check_update_downloads_when_digest_differs(cache_home, monkeypatch):
+    local = cache_home / ".cache" / "bucket" / "obj.txt"
+    local.parent.mkdir(parents=True)
+    local.write_bytes(b"old")
+    Path(f"{local}.digest").write_text("old-digest", encoding="utf-8")
+
+    key = FakeS3Key(etag='"new-digest"', payload=b"new")
+    conn = FakeS3Conn(FakeS3Bucket(key))
+    monkeypatch.setattr(cloud_cache.boto, "connect_s3", MagicMock(return_value=conn))
+
+    cloud_cache.s3cache_download("bucket", "obj.txt", cache_prefix="cache", check_update=True)
+
+    assert local.read_bytes() == b"new"
+    assert Path(f"{local}.digest").read_text(encoding="utf-8") == "new-digest"
+
+
+def test_gcs_dry_run_paths_do_not_hit_api(cache_home, monkeypatch):
+    called = {"client": 0}
+
+    class DummyClient:
+        def __init__(self):
+            called["client"] += 1
+
+    google_module = types.ModuleType("google")
+    cloud_module = types.ModuleType("google.cloud")
+    storage_module = types.ModuleType("google.cloud.storage")
+    storage_module.Client = DummyClient
+    cloud_module.storage = storage_module
+    google_module.cloud = cloud_module
+
+    monkeypatch.setitem(sys.modules, "google", google_module)
+    monkeypatch.setitem(sys.modules, "google.cloud", cloud_module)
+    monkeypatch.setitem(sys.modules, "google.cloud.storage", storage_module)
+
+    existing = cache_home / ".cache" / "gcs" / "a.txt"
+    existing.parent.mkdir(parents=True)
+    existing.write_text("x", encoding="utf-8")
+
+    p1 = cloud_cache.gcs_cache_download("gcs", "a.txt", cache_prefix="cache", dry_run=True)
+    p2 = cloud_cache.gcs_cache_download("gcs", "b.txt", cache_prefix="cache", dry_run=True, check_update=True)
+
+    assert p1.endswith("/.cache/gcs/a.txt")
+    assert p2.endswith("/.cache/gcs/b.txt")
+    assert called["client"] == 0
+
+
+def test_gcs_check_update_up_to_date_does_not_download(cache_home, monkeypatch):
+    local = cache_home / ".cache" / "bucket" / "obj.txt"
+    local.parent.mkdir(parents=True)
+    local.write_bytes(b"same")
+    Path(f"{local}.digest").write_text("etag-1", encoding="utf-8")
+
+    blob = FakeBlob(etag="etag-1", payload=b"new")
+    client = FakeGcsClient(FakeGcsBucket(blob))
+    install_fake_google_storage(monkeypatch, client)
+
+    cloud_cache.gcs_cache_download("bucket", "obj.txt", cache_prefix="cache", check_update=True)
+
+    blob.download_to_filename.assert_not_called()
+    assert local.read_bytes() == b"same"
+
+
+def test_gcs_check_update_downloads_when_digest_differs(cache_home, monkeypatch):
+    local = cache_home / ".cache" / "bucket" / "obj.txt"
+    local.parent.mkdir(parents=True)
+    local.write_bytes(b"old")
+    Path(f"{local}.digest").write_text("old", encoding="utf-8")
+
+    blob = FakeBlob(etag="etag-new", payload=b"new")
+    client = FakeGcsClient(FakeGcsBucket(blob))
+    install_fake_google_storage(monkeypatch, client)
+
+    cloud_cache.gcs_cache_download("bucket", "obj.txt", cache_prefix="cache", check_update=True)
+
+    assert local.read_bytes() == b"new"
+    assert Path(f"{local}.digest").read_text(encoding="utf-8") == "etag-new"
+
+
+def test_http_dry_run_existing_and_missing(cache_home, monkeypatch):
+    existing = cache_home / ".cache" / "example.com" / "f.txt"
+    existing.parent.mkdir(parents=True)
+    existing.write_text("x", encoding="utf-8")
+
+    mocked = MagicMock()
+    monkeypatch.setattr(cloud_cache.requests, "get", mocked)
+
+    p1 = cloud_cache.http_cache_download("https://example.com/f.txt", cache_prefix="cache", dry_run=True)
+    p2 = cloud_cache.http_cache_download("https://example.com/missing.txt", cache_prefix="cache", dry_run=True, check_update=True)
+
+    assert p1.endswith("/.cache/example.com/f.txt")
+    assert p2.endswith("/.cache/example.com/missing.txt")
+    mocked.assert_not_called()
+
+
+def test_http_update_downloads_when_status_200(cache_home, monkeypatch):
+    local = cache_home / ".cache" / "example.com" / "f.txt"
+    local.parent.mkdir(parents=True)
+    local.write_bytes(b"old")
+
+    monkeypatch.setattr(
+        cloud_cache.requests,
+        "get",
+        MagicMock(return_value=FakeHttpResponse(200, chunks=[b"n", b"e", b"w"])),
+    )
+
+    cloud_cache.http_cache_download("https://example.com/f.txt", cache_prefix="cache", check_update=True)
+
+    assert local.read_bytes() == b"new"
+
+
+def test_http_missing_download_raises_on_non_200(cache_home, monkeypatch):
+    monkeypatch.setattr(cloud_cache.requests, "get", MagicMock(return_value=FakeHttpResponse(503)))
+
+    with pytest.raises(RuntimeError, match="can't download file"):
+        cloud_cache.http_cache_download("https://example.com/f.txt", cache_prefix="cache")
+
+
+def test_http_with_local_path_and_empty_dirname(cache_home, monkeypatch):
+    del cache_home
+    monkeypatch.setattr(
+        cloud_cache.requests,
+        "get",
+        MagicMock(return_value=FakeHttpResponse(200, chunks=[b"a"])),
+    )
+
+    path = cloud_cache.http_cache_download("https://example.com/file", local_path="local.bin")
+
+    assert path == "local.bin"
+    assert Path("local.bin").read_bytes() == b"a"
+    Path("local.bin").unlink()
+
+
+def test_cli_commands_echo_result_paths(monkeypatch, capsys):
+    monkeypatch.setattr(cloud_cache, "s3cache_download", lambda *args, **kwargs: "/tmp/s3")
+    monkeypatch.setattr(cloud_cache, "gcs_cache_download", lambda *args, **kwargs: "/tmp/gcs")
+    monkeypatch.setattr(cloud_cache, "http_cache_download", lambda *args, **kwargs: "/tmp/http")
+
+    cloud_cache.s3cache("b", "k")
+    cloud_cache.gcs_cache("b", "k")
+    cloud_cache.http_cache("https://example.com")
+
+    out = capsys.readouterr().out
+    assert "/tmp/s3" in out
+    assert "/tmp/gcs" in out
+    assert "/tmp/http" in out
+
+
+def test_main_invokes_app(monkeypatch):
+    called = MagicMock()
+    monkeypatch.setattr(cloud_cache, "app", called)
+
+    cloud_cache.main()
+
+    called.assert_called_once_with()
