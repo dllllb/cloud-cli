@@ -1,23 +1,15 @@
 #!/usr/bin/env python3
 import hashlib
 import os
-from typing import Iterable, Optional
+from typing import Optional
 from urllib.parse import urlparse
 
 import boto
 import requests
 import typer
+from tqdm import tqdm
 
 app = typer.Typer(no_args_is_help=True)
-
-
-def iter_with_progress(chunks: Iterable[bytes]):
-    try:
-        from tqdm import tqdm
-
-        return tqdm(chunks)
-    except ImportError:
-        return chunks
 
 
 def s3cache_download(
@@ -215,7 +207,7 @@ def http_cache_download(
             else:
                 typer.echo(f"file {cache_file} is changed, updating...")
                 with open(cache_file, "wb") as file_obj:
-                    for chunk in iter_with_progress(response.iter_content(chunk_size=128)):
+                    for chunk in tqdm(response.iter_content(chunk_size=128)):
                         if chunk:
                             file_obj.write(chunk)
                 typer.echo(f"file {cache_file} is updated")
@@ -235,7 +227,7 @@ def http_cache_download(
             )
 
         with open(cache_file, "wb") as file_obj:
-            for chunk in iter_with_progress(response.iter_content(chunk_size=128)):
+            for chunk in tqdm(response.iter_content(chunk_size=128)):
                 if chunk:
                     file_obj.write(chunk)
 
