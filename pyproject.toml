@@ -38,6 +38,6 @@ disable = [
 max-line-length = 120 
 
 [project.scripts]
-cloud-aws = "aws_cli:main"
+aws-ec2 = "aws_ec2_cli:main"
 cloud-cache = "cloud_cache:main"
 cloud-ru-mls = "cloud_ru_mls:main"
