@@ -37,10 +37,6 @@ disable = [
 max-line-length = 120 
 
 [project.scripts]
-ec2-ansible = "ec2_ansible:main"
-ec2-ssh-conf-sync = "ec2_ssh_config_sync:main"
-ec2cmd = "ec2cmd:main"
-gcs-cache = "gcs_cache:main"
-http-cache = "http_cache:main"
-s3cache = "s3cache:main"
+cloud-aws = "aws_cli:main"
+cloud-cache = "cloud_cache:main"
 cloud-ru-mls = "cloud_ru_mls:main"
