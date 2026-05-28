@@ -37,6 +37,7 @@ CONFIGURAION_FILE_HELP = """
 
 app = typer.Typer(no_args_is_help=True)
 
+# API Docs: https://api.ai.cloud.ru/public/v2/redoc
 BASE_URL = "https://api.ai.cloud.ru/public/v2"
 
 NB_TYPE_TO_NGPU = {f"gpu_{n}": n for n in range(1, 9)}
