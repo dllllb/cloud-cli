@@ -35,7 +35,7 @@ Add `Include ec2.conf` directive to the `~/.ssh/config`. It should be added befo
 
 ## Cloud.ru credentials
 
-Cloud.ru credentials for ML Space should be in `~/.cloudru/credentials.json`
+Cloud.ru credentials for ML Space should be in `~/.cloudru/config.json`
 
 Example:
 ```json
@@ -49,6 +49,7 @@ Example:
             "x-workspace-id": "uuid",
             "x-api-key": "uuid"
         }
-    }
+    },
+    "default-region": "SR001"
 }
 ```

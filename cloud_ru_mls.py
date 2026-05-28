@@ -11,7 +11,7 @@ from rich.markdown import Markdown
 from rich.table import Table
 from rich import box
 
-CONFIG_PATH = "~/.cloudru/credentials.json"
+CONFIG_PATH = "~/.cloudru/config.json"
 
 CONFIGURAION_FILE_HELP = """
 **Configuration file is required!**
@@ -30,7 +30,8 @@ CONFIGURAION_FILE_HELP = """
             "x-workspace-id": "uuid",
             "x-api-key": "uuid"
         }
-    }
+    },
+    "default-region": "SR001"
 ```
 }""".replace('CONFIG_FILE_PATH', CONFIG_PATH)
 
@@ -139,7 +140,7 @@ def get_allocation_resources(headers, alloc):
     return resp.json()
 
 
-def init_headers(workspace_name: str, verbose=True):
+def init(workspace_name: str, region=None, verbose=True):
     config = load_config()
     ws_name, ws = get_workspace(config, workspace_name)
     token = authenticate(ws, config["auth"])
@@ -153,12 +154,16 @@ def init_headers(workspace_name: str, verbose=True):
     if verbose:
         rprint(Markdown(f"Using workspace: `{ws_name}`"))
 
-    return headers
+    settled_reg = config.get('default-region')
+    if region is not None:
+        settled_reg = region
+
+    return headers, settled_reg
 
 
 @app.command()
 def nb_list(workspace: Annotated[str, typer.Option()] = None, description: bool = False):
-    headers = init_headers(workspace)
+    headers, _ = init(workspace)
 
     notebooks = list_notebooks(headers)
 
@@ -191,8 +196,8 @@ def nb_list(workspace: Annotated[str, typer.Option()] = None, description: bool 
 
 
 @app.command()
-def job_list(region: Annotated[str, typer.Option()], workspace: Annotated[str, typer.Option()] = None):
-    headers = init_headers(workspace)
+def job_list(region: Annotated[str, typer.Option()] = None, workspace: Annotated[str, typer.Option()] = None):
+    headers, region = init(workspace, region)
 
     jobs = list_jobs(headers, region)
 
@@ -214,7 +219,7 @@ def job_list(region: Annotated[str, typer.Option()], workspace: Annotated[str, t
 
 @app.command()
 def gpu_stat(region: Annotated[str, typer.Option()], workspace: Annotated[str, typer.Option()] = None):
-    headers = init_headers(workspace)
+    headers, _ = init(workspace)
 
     allocs = get_ws_allocactions(headers)
 
@@ -248,7 +253,7 @@ def gpu_stat(region: Annotated[str, typer.Option()], workspace: Annotated[str, t
 
 @app.command()
 def nb_ssh_conf(workspace: Annotated[str, typer.Option()] = None):
-    headers = init_headers(workspace, verbose=False)
+    headers, _ = init(workspace, verbose=False)
 
     ns = get_namespace(headers)
     notebooks = list_notebooks(headers)
