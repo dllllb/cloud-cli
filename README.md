@@ -1,5 +1,13 @@
 This repo contains a set of small command-line tools for more convenient interaction with cloud services like AWS, Google Cloud, Cloud.ru
 
+# Installation
+
+```sh
+uv tool install git+https://github.com/dllllb/cloud-cli
+```
+
+# Cloud.ru ML Space CLI
+
 List Cloud.ru ML Space notebooks:
 ```sh
 uvx --from git+https://github.com/dllllb/cloud-cli cloud-ru-mls nb-list
