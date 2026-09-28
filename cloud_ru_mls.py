@@ -173,7 +173,7 @@ def nb_list(workspace: Annotated[str, typer.Option()] = None, description: bool 
             "Name": nb["name"],
             "Author": nb["author"],
             "Duration": timedelta(seconds=nb["ageSeconds"]),
-            "nGPU": NB_TYPE_TO_NGPU[nb["notebookType"]],
+            "nGPU": NB_TYPE_TO_NGPU.get(nb["notebookType"], 0),
             "Region": nb["region"],
             "Description": nb["description"],
         }
